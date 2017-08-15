@@ -78,7 +78,8 @@ def get_basic_stats(sbmlfolder,compartment="all"):
 #    print(set(all_compartments))
     print(df.describe()) ## this is to be further plotted
     g = sns.pairplot(df,hue="Compartment",vars=['reactions','species','constraints','FunctionDefinitions','rules'])
-    plt.savefig('images/pairplot.png', bbox_inches='tight')
+    plt.show()
+#    plt.savefig('images/pairplot.png', bbox_inches='tight')
 
 if __name__ == "__main__":
 

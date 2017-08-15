@@ -22,15 +22,34 @@ def printAnnotation(sb, id=""):
     print(sb.getAnnotationString() + "\n");
     print("\n");
 
+
+def model_generator(infolder):
+    candidate_models = glob.glob(infolder+"/*.xml") ## get only xml files
+    for cand in candidate_models:
+        yield cand
+
+def get_datapoint(model,sp):
+    return {"FunctionDefinitions" : model.getNumFunctionDefinitions(),
+            "unitDefinitions" : model.getNumUnitDefinitions(),
+            "speciesTypes" : model.getNumSpeciesTypes(),
+            "compartments" : model.getNumCompartments(),
+            "species" : model.getNumSpecies(),
+            "parameters" : model.getNumParameters(),
+            "initialAssignments" : model.getNumInitialAssignments(),
+            "rules" : model.getNumRules(),
+            "constraints" : model.getNumConstraints(),
+            "reactions" : model.getNumReactions(),
+            "events" : model.getNumEvents(),"Compartment" : sp.getId()}
+
 def get_basic_stats(sbmlfolder,compartment="all"):
 
     ## read and print the basic stats for individual .xml entries
 
-    candidate_models = glob.glob(sbmlfolder+"/*.xml") ## get only xml files
+#    candidate_models = glob.glob(sbmlfolder+"/*.xml") ## get only xml files
     all_levels = []
     df = pd.DataFrame()  ## this is the container for the basic stats
     all_compartments = []
-    for en, candidate in enumerate(candidate_models):
+    for candidate in sbmlfolder:
         document = readSBML(candidate);
         if (document.getNumErrors() > 0):
             pass
@@ -45,32 +64,10 @@ def get_basic_stats(sbmlfolder,compartment="all"):
                         ## add data only if specific compartment
                         all_compartments.append(sp.getId())
                         if sp.getId() in compartment:
-                            datapoint = {"FunctionDefinitions" : model.getNumFunctionDefinitions(),
-                                         "unitDefinitions" : model.getNumUnitDefinitions(),
-                                         "speciesTypes" : model.getNumSpeciesTypes(),
-                                         "compartments" : model.getNumCompartments(),
-                                         "species" : model.getNumSpecies(),
-                                         "parameters" : model.getNumParameters(),
-                                         "initialAssignments" : model.getNumInitialAssignments(),
-                                         "rules" : model.getNumRules(),
-                                         "constraints" : model.getNumConstraints(),
-                                         "reactions" : model.getNumReactions(),
-                                         "events" : model.getNumEvents(),
-                                         "Compartment" : sp.getId()}
+                            datapoint = get_datapoint(model,sp)
                             df = df.append(datapoint,ignore_index=True)    
                     else:
-                        datapoint = {"FunctionDefinitions" : model.getNumFunctionDefinitions(),
-                                     "unitDefinitions" : model.getNumUnitDefinitions(),
-                                     "speciesTypes" : model.getNumSpeciesTypes(),
-                                     "compartments" : model.getNumCompartments(),
-                                     "species" : model.getNumSpecies(),
-                                     "parameters" : model.getNumParameters(),
-                                     "initialAssignments" : model.getNumInitialAssignments(),
-                                     "rules" : model.getNumRules(),
-                                     "constraints" : model.getNumConstraints(),
-                                     "reactions" : model.getNumReactions(),
-                                     "events" : model.getNumEvents(),
-                                     "Compartment" : sp.getId()}
+                        datapoint = get_datapoint(model,sp)
                         df = df.append(datapoint,ignore_index=True)
                         
     ## analyze the obtained dataset
@@ -84,5 +81,12 @@ def get_basic_stats(sbmlfolder,compartment="all"):
 if __name__ == "__main__":
 
     ## this main class runs the whole workflow statistics scheme
+
+    ## first get the model generator
+    datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
+    model_getter = model_generator(datafolder) ## this is the model generator
+    
+    ## specify compartments of interest and plot pairs of counts!
     compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
-    get_basic_stats("data/BioModels_Database-r31_pub-sbml_files/curated",compartment=compartments_to_check)
+    get_basic_stats(model_getter,compartment=compartments_to_check)
+    

@@ -82,11 +82,16 @@ if __name__ == "__main__":
 
     ## this main class runs the whole workflow statistics scheme
 
-    ## first get the model generator
+    ## first compute some basic statistics
     datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
-    model_getter = model_generator(datafolder) ## this is the model generator
-    
-    ## specify compartments of interest and plot pairs of counts!
+    model_getter = model_generator(datafolder)    
     compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
     get_basic_stats(model_getter,compartment=compartments_to_check)
     
+
+    ## second, get information on mathematical formulas along with compartments and return this dataset.
+    ## furthermore, compute Levenshtein distances between individual compartments (pairwise averages). Plot the results.
+
+    ## third, construct a bayesian model of compartment - complexity presence using dirichlet + multinomial model.
+
+    ## fin

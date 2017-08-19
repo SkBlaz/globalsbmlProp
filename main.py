@@ -4,7 +4,7 @@ import sys
 import os.path
 from libsbml import *  ## the main library
 import glob ## for file search
-from collections import Counter
+from collections import Counter,defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -87,76 +87,118 @@ def printReactionMath(n, r):
 
 def printFunctionDefinition(n, fd):
      if (fd.isSetMath()):
-         print("FunctionDefinition " + str(n) + ", " + fd.getId());
+ #        print("FunctionDefinition " + str(n) + ", " + fd.getId());
  
          math = fd.getMath();
- 
          # Print function arguments. 
-         if (math.getNumChildren() > 1):
-             print("(" + (math.getLeftChild()).getName());
+ #         if (math.getNumChildren() > 1):
+ #             print("(" + (math.getLeftChild()).getName());
+ # # Print function arguments. 
+
+ #             for n in range (1, math.getNumChildren()):
+ #                 try:
+ #                     print(", " + (math.getChild(n)).getName());
+ #                 except:
+ #                     pass
  
-             for n in range (1, math.getNumChildren()):
-                 try:
-                     print(", " + (math.getChild(n)).getName());
-                 except:
-                     pass
+ #         print(") := ");
  
-         print(") := ");
- 
-         # Print function body. 
+         # # Print function body. 
          if (math.getNumChildren() == 0):
              print("(no body defined)");
          else:
              math = math.getChild(math.getNumChildren() - 1);
              formula = formulaToString(math);
-             print(formula + "\n");
+             return formula
+#             print(formula + "\n");
 
-def getModelMath(genModels):
+def getModelMath(genModels,cmprt='all'):
 
     ## this function obtaines reaction and other math related to specific models and saves them into a dataframe
-
-    # all_levels = []
-    # df = pd.DataFrame()  ## this is the container for the basic stats
-    # all_compartments = []
     
-    modelsave = {}
+    cpfor = defaultdict(list)
     for candidate in genModels:
         document = readSBML(candidate);
         if (document.getNumErrors() > 0):
             pass
         else:
             model = document.getModel();
-            # for n in range(0, model.getNumReactions()):
-            #     printReactionMath(n + 1, model.getReaction(n));
+
+            formulas = []
             for n in range(0,model.getNumFunctionDefinitions()):
-                printFunctionDefinition(n + 1, model.getFunctionDefinition(n));
+                formulas.append(printFunctionDefinition(n + 1, model.getFunctionDefinition(n)))
+                
+            for i in range(0, model.getNumCompartments()):
+                sp = model.getCompartment(i)
+                if cmprt != 'all':
+                    if sp.getId() in cmprt:
+                        cpfor[sp.getId()].append(formulas)
+                else:
+                    cpfor[sp.getId()].append(formulas)
+
+    ## get compartment|formula structure
+    return cpfor
+
+
+def intra_compartment_distances(formula_file):
+
+    import editdistance as ed
+    from itertools import combinations
+#    editdistance.eval('banana', 'bahama')
+    distobj = {}
+    
+    for k,v in formula_file.items():
+
+        all_formulas = []
+        total_combinations=0
+        current_ed = 0
+        for flist in v:
+            for formula in flist:
+                all_formulas.append(formula)
+
+        for f1,f2 in combinations(all_formulas,2):
+            current_ed += ed.eval(f1,f2)
+            total_combinations += 1
+
+        try:
+            distobj[k] = float(current_ed/total_combinations)
+        except:
+            pass
+
+    print(distobj)
+            
+
 if __name__ == "__main__":
 
 
     import argparse
-
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
-    parser.add_argument("--math",help="Math based process clustering")    
+    parser.add_argument("--math",help="Math based process clustering")
+    parser.add_argument("--lev",help="Distances within individual components")      
     args = parser.parse_args()
 
-
-    print(args)
+    print("Beginning extraction..")
     
     datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
     model_getter = model_generator(datafolder)    
+
+    ## query parts of the cell/ organism
+    compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
     
     if args.stats:
         ## those are some basic numeric statistics regarding individual models
-        compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
 
     ## this only gets the saved data, which is further processed.
-    getModelMath(model_getter)
+    print("Formulas extracted")
+    comp_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+
+    if args.lev:
+        intra_compartment_distances(comp_formulas)
+        
 
 
-    ## 1.) abstract formulas
-    ## 2.) formula length
-    ## 3.) regex for forms and count that
-    ## 4.) 
+    ## this is basic, extract higher level terms + pairwise distance matrix!

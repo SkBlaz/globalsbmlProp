@@ -76,22 +76,87 @@ def get_basic_stats(sbmlfolder,compartment="all"):
     print(df.describe()) ## this is to be further plotted
     g = sns.pairplot(df,hue="Compartment",vars=['reactions','species','constraints','FunctionDefinitions','rules'])
     plt.show()
-#    plt.savefig('images/pairplot.png', bbox_inches='tight')
 
+
+def printReactionMath(n, r):
+    if (r.isSetKineticLaw()):
+        kl = r.getKineticLaw();
+        if (kl.isSetMath()):
+            formula = formulaToString(kl.getMath());
+            print("Reaction " + str(n) + ", formula: " + formula + "\n");
+
+def printFunctionDefinition(n, fd):
+     if (fd.isSetMath()):
+         print("FunctionDefinition " + str(n) + ", " + fd.getId());
+ 
+         math = fd.getMath();
+ 
+         # Print function arguments. 
+         if (math.getNumChildren() > 1):
+             print("(" + (math.getLeftChild()).getName());
+ 
+             for n in range (1, math.getNumChildren()):
+                 try:
+                     print(", " + (math.getChild(n)).getName());
+                 except:
+                     pass
+ 
+         print(") := ");
+ 
+         # Print function body. 
+         if (math.getNumChildren() == 0):
+             print("(no body defined)");
+         else:
+             math = math.getChild(math.getNumChildren() - 1);
+             formula = formulaToString(math);
+             print(formula + "\n");
+
+def getModelMath(genModels):
+
+    ## this function obtaines reaction and other math related to specific models and saves them into a dataframe
+
+    # all_levels = []
+    # df = pd.DataFrame()  ## this is the container for the basic stats
+    # all_compartments = []
+    
+    modelsave = {}
+    for candidate in genModels:
+        document = readSBML(candidate);
+        if (document.getNumErrors() > 0):
+            pass
+        else:
+            model = document.getModel();
+            # for n in range(0, model.getNumReactions()):
+            #     printReactionMath(n + 1, model.getReaction(n));
+            for n in range(0,model.getNumFunctionDefinitions()):
+                printFunctionDefinition(n + 1, model.getFunctionDefinition(n));
 if __name__ == "__main__":
 
-    ## this main class runs the whole workflow statistics scheme
 
-    ## first compute some basic statistics
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--stats",help="Some basic statistics")
+    parser.add_argument("--math",help="Math based process clustering")    
+    args = parser.parse_args()
+
+
+    print(args)
+    
     datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
     model_getter = model_generator(datafolder)    
-    compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
-    get_basic_stats(model_getter,compartment=compartments_to_check)
     
+    if args.stats:
+        ## those are some basic numeric statistics regarding individual models
+        compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
+        get_basic_stats(model_getter,compartment=compartments_to_check)
 
-    ## second, get information on mathematical formulas along with compartments and return this dataset.
-    ## furthermore, compute Levenshtein distances between individual compartments (pairwise averages). Plot the results.
 
-    ## third, construct a bayesian model of compartment - complexity presence using dirichlet + multinomial model.
+    ## this only gets the saved data, which is further processed.
+    getModelMath(model_getter)
 
-    ## fin
+
+    ## 1.) abstract formulas
+    ## 2.) formula length
+    ## 3.) regex for forms and count that
+    ## 4.) 

@@ -180,16 +180,23 @@ def inter_component_distances(formula_file):
     ## double loop for pairwise distances v is of form list of lists
     for k,v in formula_file.items():
         for k2,v2 in formula_file.items():
-            
+
+
             ## first get representative formulas for individual components
             v1_rep = [formula for sublist in v for formula in sublist]
             v2_rep = [formula for sublist in v2 for formula in sublist]
 
+            if k==k2:
+                if "".join(v1_rep) == "".join(v2_rep):
+                    print("same:",k,k2)
+                    
             distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+
             if distMinAvg >= 0:
                 distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
 
-    ax = sns.heatmap(distframe)
+    indata = distframe.pivot("component1","component2","distance")
+    ax = sns.heatmap(indata)
     plt.show()
 
 if __name__ == "__main__":

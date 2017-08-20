@@ -219,14 +219,7 @@ if __name__ == "__main__":
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
 
-    ## this only gets the saved data, which is further processed.
-    print("Formulas extracted")
-    comp_formulas = getModelMath(model_getter)
-
-    if args.lev:
-        intra_compartment_distances(comp_formulas)
-        
-    if args.interlev:
+    ## this only gets the saved data, which is further
         inter_component_distances(comp_formulas)
 
     ## this is basic, extract higher level terms + pairwise distance matrix!

@@ -196,9 +196,7 @@ def inter_component_distances(formula_file):
 
 if __name__ == "__main__":
 
-
-    import argparse
-    
+    import argparse    
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
     parser.add_argument("--math",help="Math based process clustering")
@@ -218,8 +216,9 @@ if __name__ == "__main__":
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
+    comp_formulas = getModelMath(model_getter,cmprt='all')
 
-    ## this only gets the saved data, which is further
+    ## this computes inter-component distances, pairwise. even within a single component, there is large variability present within individual component!
+    if args.interlev:
+        ## this only gets the saved data, which is further
         inter_component_distances(comp_formulas)
-
-    ## this is basic, extract higher level terms + pairwise distance matrix!

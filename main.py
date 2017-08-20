@@ -165,8 +165,23 @@ def intra_compartment_distances(formula_file):
         except:
             pass
 
+    ## perhaps plot this here..
     print(distobj)
-            
+
+def inter_component_distances(formula_file):
+
+    import editdistance as ed
+    from itertools import combinations
+
+    ## double loop for pairwise distances v is of form list of lists
+    for k,v in formula_file.items():
+        for k2,v2 in formula_file.items():
+            ## first get representative formulas for individual components
+            v1_rep = [y for y in [x for x in v]]] ## all individual formulas
+            v2_rep = [y for y in [x for x in v2]]] ## all individual formulas
+
+            ## compute pairwise distances and take the mean of this
+            ## output as component1 component2 meanDist
 
 if __name__ == "__main__":
 
@@ -199,6 +214,7 @@ if __name__ == "__main__":
     if args.lev:
         intra_compartment_distances(comp_formulas)
         
-
+    if args.interlev:
+        inter_component_distances(comp_formulas)
 
     ## this is basic, extract higher level terms + pairwise distance matrix!

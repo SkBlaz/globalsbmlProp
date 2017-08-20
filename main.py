@@ -184,12 +184,7 @@ def inter_component_distances(formula_file):
 
             ## first get representative formulas for individual components
             v1_rep = [formula for sublist in v for formula in sublist]
-            v2_rep = [formula for sublist in v2 for formula in sublist]
-
-            if k==k2:
-                if "".join(v1_rep) == "".join(v2_rep):
-                    print("same:",k,k2)
-                    
+            v2_rep = [formula for sublist in v2 for formula in sublist]                    
             distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
 
             if distMinAvg >= 0:
@@ -226,7 +221,7 @@ if __name__ == "__main__":
 
     ## this only gets the saved data, which is further processed.
     print("Formulas extracted")
-    comp_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+    comp_formulas = getModelMath(model_getter)
 
     if args.lev:
         intra_compartment_distances(comp_formulas)

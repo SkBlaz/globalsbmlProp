@@ -178,10 +178,14 @@ def inter_component_distances(formula_file):
     print("Starting pairwise distance measurements..")
     distframe = pd.DataFrame()
     ## double loop for pairwise distances v is of form list of lists
+    partial = 0
+    totlen = len(formula_file.keys())
     for k,v in formula_file.items():
+        partial+=1
+        if partial % 10 == 0:
+            print(float(partial*100/totlen),"%","complete.")
         for k2,v2 in formula_file.items():
-
-
+            
             ## first get representative formulas for individual components
             v1_rep = [formula for sublist in v for formula in sublist]
             v2_rep = [formula for sublist in v2 for formula in sublist]                    

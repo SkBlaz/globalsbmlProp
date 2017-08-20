@@ -172,16 +172,25 @@ def inter_component_distances(formula_file):
 
     import editdistance as ed
     from itertools import combinations
-
+    import numpy as np
+    import seaborn as sns
+    
+    print("Starting pairwise distance measurements..")
+    distframe = pd.DataFrame()
     ## double loop for pairwise distances v is of form list of lists
     for k,v in formula_file.items():
         for k2,v2 in formula_file.items():
+            
             ## first get representative formulas for individual components
-            v1_rep = [y for y in [x for x in v]]] ## all individual formulas
-            v2_rep = [y for y in [x for x in v2]]] ## all individual formulas
+            v1_rep = [formula for sublist in v for formula in sublist]
+            v2_rep = [formula for sublist in v2 for formula in sublist]
 
-            ## compute pairwise distances and take the mean of this
-            ## output as component1 component2 meanDist
+            distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+            if distMinAvg >= 0:
+                distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
+
+    ax = sns.heatmap(distframe)
+    plt.show()
 
 if __name__ == "__main__":
 
@@ -191,7 +200,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
     parser.add_argument("--math",help="Math based process clustering")
-    parser.add_argument("--lev",help="Distances within individual components")      
+    parser.add_argument("--lev",help="Distances within individual components")
+    parser.add_argument("--interlev",help="Distances within individual components")       
     args = parser.parse_args()
 
     print("Beginning extraction..")

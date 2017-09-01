@@ -201,7 +201,7 @@ def inter_component_distances(formula_file):
     plt.show()
 
     tmpframe = distframe[distframe['component1'] == distframe['component2']]
-    tmpframe = tmpframe.sort(['distance'])
+    tmpframe = tmpframe.sort_values(['distance'])
     sns.barplot(x="component1",y="distance",data=tmpframe)
     plt.xticks(rotation=90)
     plt.show()
@@ -216,7 +216,7 @@ def inter_component_distances_fuzzy(formula_file):
     from itertools import combinations
     import numpy as np
     import seaborn as sns
-    swalign.NucleotideScoringMatrix(2,-1)
+
     print("Starting pairwise distance measurements..")
     distframe = pd.DataFrame()
     ## double loop for pairwise distances v is of form list of lists

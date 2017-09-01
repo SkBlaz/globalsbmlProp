@@ -195,7 +195,55 @@ def inter_component_distances(formula_file):
                 distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
 
     indata = distframe.pivot("component1","component2","distance")
+    ax = sns.heatmap(indata,cmap="BuGn")
+    plt.xticks(rotation=90)
+    plt.yticks([])
+    plt.show()
+
+    tmpframe = distframe[distframe['component1'] == distframe['component2']]
+    tempframe = tempframe.sort(['distance'])
+    sns.barplot(x="component1",y="distance",data=tmpframe)
+    plt.xticks(rotation=90)
+    plt.show()
+
+    distframe.to_csv("distances.csv")
+
+def inter_component_distances_fuzzy(formula_file):
+    
+    from fuzzywuzzy import fuzz
+    from fuzzywuzzy import process
+    
+    from itertools import combinations
+    import numpy as np
+    import seaborn as sns
+    swalign.NucleotideScoringMatrix(2,-1)
+    print("Starting pairwise distance measurements..")
+    distframe = pd.DataFrame()
+    ## double loop for pairwise distances v is of form list of lists
+    partial = 0
+    totlen = len(formula_file.keys())
+    for k,v in formula_file.items():
+        partial+=1
+        if partial % 10 == 0:
+            print(float(partial*100/totlen),"%","complete.")
+        for k2,v2 in formula_file.items():
+            
+            ## first get representative formulas for individual components
+            v1_rep = [formula for sublist in v for formula in sublist]
+            v2_rep = [formula for sublist in v2 for formula in sublist]                    
+            distMinAvg = np.mean([fuzz.ratio(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+
+            if distMinAvg >= 0:
+                distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
+
+    indata = distframe.pivot("component1","component2","distance")
     ax = sns.heatmap(indata)
+    plt.xticks(rotation=90)
+    plt.yticks([])
+    plt.show()
+
+    tmpframe = distframe[distframe['component1'] == distframe['component2']]
+    sns.barplot(x="component1",y="distance",data=tmpframe)
     plt.show()
 
 if __name__ == "__main__":
@@ -203,7 +251,6 @@ if __name__ == "__main__":
     import argparse    
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
-    parser.add_argument("--math",help="Math based process clustering")
     parser.add_argument("--lev",help="Distances within individual components")
     parser.add_argument("--interlev",help="Distances within individual components")       
     args = parser.parse_args()

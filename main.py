@@ -201,7 +201,7 @@ def inter_component_distances(formula_file):
     plt.show()
 
     tmpframe = distframe[distframe['component1'] == distframe['component2']]
-    tempframe = tempframe.sort(['distance'])
+    tmpframe = tmpframe.sort(['distance'])
     sns.barplot(x="component1",y="distance",data=tmpframe)
     plt.xticks(rotation=90)
     plt.show()

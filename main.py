@@ -139,112 +139,61 @@ def getModelMath(genModels,cmprt='all'):
     ## get compartment|formula structure
     return cpfor
 
+def inter_component_distances(formula_file,measure="ED",precomputed=None):
 
-def intra_compartment_distances(formula_file):
-
-    import editdistance as ed
-    from itertools import combinations
-#    editdistance.eval('banana', 'bahama')
-    distobj = {}
-    
-    for k,v in formula_file.items():
-
-        all_formulas = []
-        total_combinations=0
-        current_ed = 0
-        for flist in v:
-            for formula in flist:
-                all_formulas.append(formula)
-
-        for f1,f2 in combinations(all_formulas,2):
-            current_ed += ed.eval(f1,f2)
-            total_combinations += 1
-
-        try:
-            distobj[k] = float(current_ed/total_combinations)
-        except:
-            pass
-
-    ## perhaps plot this here..
-    print(distobj)
-
-def inter_component_distances(formula_file):
-
-    import editdistance as ed
-    from itertools import combinations
-    import numpy as np
     import seaborn as sns
+    if precomputed == None:
+        if measure == "ED":
+            import editdistance as ed
+        elif measure == "fuzzy":
+            from fuzzywuzzy import fuzz
+            from fuzzywuzzy import process
+        else:
+            pass
+        from itertools import combinations
+        import numpy as np
+
     
-    print("Starting pairwise distance measurements..")
-    distframe = pd.DataFrame()
-    ## double loop for pairwise distances v is of form list of lists
-    partial = 0
-    totlen = len(formula_file.keys())
-    for k,v in formula_file.items():
-        partial+=1
-        if partial % 10 == 0:
-            print(float(partial*100/totlen),"%","complete.")
-        for k2,v2 in formula_file.items():
+        print("Starting pairwise distance measurements..")
+        distframe = pd.DataFrame()
+        ## double loop for pairwise distances v is of form list of lists
+        partial = 0
+        totlen = len(formula_file.keys())
+        for k,v in formula_file.items():
+            partial+=1
+            if partial % 10 == 0:
+                print(float(partial*100/totlen),"%","complete.")
+            for k2,v2 in formula_file.items():
             
-            ## first get representative formulas for individual components
-            v1_rep = [formula for sublist in v for formula in sublist]
-            v2_rep = [formula for sublist in v2 for formula in sublist]                    
-            distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                ## first get representative formulas for individual components
+                v1_rep = [formula for sublist in v for formula in sublist]
+                v2_rep = [formula for sublist in v2 for formula in sublist]
 
-            if distMinAvg >= 0:
-                distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
+                if measure == "ED":
+                    distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                if measure == "fuzzy":
+                    distMinAvg = np.mean([fuzz.partial_ratio(s1,s2) for s1 in v1_rep for s2 in v2_rep])
 
-    indata = distframe.pivot("component1","component2","distance")
+                if distMinAvg >= 0:
+                    distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
+    else:
+        distframe = pd.read_csv(precomputed)
+                    
+    indata = distframe.pivot("First component","Second component","distance")
     ax = sns.heatmap(indata,cmap="BuGn")
     plt.xticks(rotation=90)
-    plt.yticks([])
+    plt.yticks(rotation=0)
     plt.show()
 
-    tmpframe = distframe[distframe['component1'] == distframe['component2']]
+    tmpframe = distframe[distframe['First component'] == distframe['Second component']]
     tmpframe = tmpframe.sort_values(['distance'])
-    sns.barplot(x="component1",y="distance",data=tmpframe)
+    sns.barplot(x="First component",y="distance",data=tmpframe)
     plt.xticks(rotation=90)
+    plt.ylabel("Intra-compartment similarity")
     plt.show()
 
-    distframe.to_csv("distances.csv")
+    distframe.to_csv("distances"+measure+".csv")
 
-def inter_component_distances_fuzzy(formula_file):
-    
-    from fuzzywuzzy import fuzz
-    from fuzzywuzzy import process
-    
-    from itertools import combinations
-    import numpy as np
-    import seaborn as sns
-
-    print("Starting pairwise distance measurements..")
-    distframe = pd.DataFrame()
-    ## double loop for pairwise distances v is of form list of lists
-    partial = 0
-    totlen = len(formula_file.keys())
-    for k,v in formula_file.items():
-        partial+=1
-        if partial % 10 == 0:
-            print(float(partial*100/totlen),"%","complete.")
-        for k2,v2 in formula_file.items():
-            
-            ## first get representative formulas for individual components
-            v1_rep = [formula for sublist in v for formula in sublist]
-            v2_rep = [formula for sublist in v2 for formula in sublist]                    
-            distMinAvg = np.mean([fuzz.ratio(s1,s2) for s1 in v1_rep for s2 in v2_rep])
-
-            if distMinAvg >= 0:
-                distframe = distframe.append({'component1' : k, 'component2' : k2, 'distance' : distMinAvg},ignore_index=True)
-
-    indata = distframe.pivot("component1","component2","distance")
-    ax = sns.heatmap(indata)
-    plt.xticks(rotation=90)
-    plt.yticks([])
-    plt.show()
-
-    tmpframe = distframe[distframe['component1'] == distframe['component2']]
-    sns.barplot(x="component1",y="distance",data=tmpframe)
-    plt.show()
 
 if __name__ == "__main__":
 
@@ -252,7 +201,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
     parser.add_argument("--lev",help="Distances within individual components")
-    parser.add_argument("--interlev",help="Distances within individual components")       
+    parser.add_argument("--interlev",help="Distances within individual components")
+    parser.add_argument("--interfuzzy",help="Distances within individual components")  
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -273,3 +223,5 @@ if __name__ == "__main__":
     if args.interlev:
         ## this only gets the saved data, which is further
         inter_component_distances(comp_formulas)
+    if args.interfuzzy:
+        inter_component_distances(comp_formulas,measure="fuzzy")

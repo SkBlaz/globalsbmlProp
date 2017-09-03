@@ -173,6 +173,8 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                     distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
                 if measure == "fuzzy":
                     distMinAvg = np.mean([fuzz.partial_ratio(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                if measure == "fuzzy_plain":
+                    distMinAvg = np.mean([fuzz.partial(s1,s2) for s1 in v1_rep for s2 in v2_rep])
 
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
@@ -189,12 +191,19 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
     tmpframe = tmpframe.sort_values(['distance'])
     sns.barplot(x="First component",y="distance",data=tmpframe)
     plt.xticks(rotation=90)
-    plt.ylabel("Intra-compartment similarity")
+    plt.ylabel("Intra-compartment distance")
     plt.show()
 
     distframe.to_csv("distances"+measure+".csv")
 
 
+def get_similarity_list(fname):
+    distframe = pd.read_csv(fname)
+    distframe= distframe[distframe['First component'] != distframe['Second component']].sort_values(['distance'],ascending=False)
+    distframe.to_csv(fname.split(".")[0]+"similar_list.csv")
+    distframe.to_latex(fname.split(".")[0]+"similar_list.tex")
+        
+    
 if __name__ == "__main__":
 
     import argparse    
@@ -202,7 +211,9 @@ if __name__ == "__main__":
     parser.add_argument("--stats",help="Some basic statistics")
     parser.add_argument("--lev",help="Distances within individual components")
     parser.add_argument("--interlev",help="Distances within individual components")
-    parser.add_argument("--interfuzzy",help="Distances within individual components")  
+    parser.add_argument("--interfuzzy",help="Distances within individual components")
+    parser.add_argument("--simstats",help="Most similar, yet not the same")
+    parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")   
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -217,11 +228,18 @@ if __name__ == "__main__":
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
-    comp_formulas = getModelMath(model_getter,cmprt='all')
-
-    ## this computes inter-component distances, pairwise. even within a single component, there is large variability present within individual component!
+    ## 
+    comp_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+    print ("Ready to parse..", len(comp_formulas))
+    
     if args.interlev:
         ## this only gets the saved data, which is further
         inter_component_distances(comp_formulas)
     if args.interfuzzy:
         inter_component_distances(comp_formulas,measure="fuzzy")
+    if args.interfuzzybasic:
+        inter_component_distances(comp_formulas,measure="fuzzy_plain")
+
+    if args.simstats:
+        get_similarity_list(args.simstats)
+

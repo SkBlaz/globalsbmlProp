@@ -107,6 +107,7 @@ def getModelMath(genModels,cmprt='all'):
     ## this function obtaines reaction and other math related to specific models and saves them into a dataframe
     
     cpfor = defaultdict(list)
+    go_dict = defaultdict(list)
     for candidate in genModels:
         document = readSBML(candidate);
         if (document.getNumErrors() > 0):
@@ -132,6 +133,9 @@ def getModelMath(genModels,cmprt='all'):
             formulas = []
             for n in range(0,model.getNumFunctionDefinitions()):
                 formulas.append(printFunctionDefinition(n + 1, model.getFunctionDefinition(n)))
+            for el in goterms:
+                for f in formulas:
+                    go_dict[el].append(f)
                 
             for i in range(0, model.getNumCompartments()):
                 sp = model.getCompartment(i)
@@ -142,7 +146,7 @@ def getModelMath(genModels,cmprt='all'):
                     cpfor[sp.getId()].append(formulas)
 
     ## get compartment|formula structure
-    return cpfor
+    return (cpfor,go_dict)
 
 def inter_component_distances(formula_file,measure="ED",precomputed=None):
 
@@ -218,7 +222,8 @@ if __name__ == "__main__":
     parser.add_argument("--interlev",help="Distances within individual components")
     parser.add_argument("--interfuzzy",help="Distances within individual components")
     parser.add_argument("--simstats",help="Most similar, yet not the same")
-    parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")   
+    parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")
+    parser.add_argument("--gofuzzy",help="Basic fuzzy algorithm - GO")  
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -233,17 +238,23 @@ if __name__ == "__main__":
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
-    ## 
-    comp_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+    comp_formulas,go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
     print ("Ready to parse..", len(comp_formulas))
     
     if args.interlev:
         ## this only gets the saved data, which is further
         inter_component_distances(comp_formulas)
+
     if args.interfuzzy:
         inter_component_distances(comp_formulas,measure="fuzzy")
+
     if args.interfuzzybasic:
         inter_component_distances(comp_formulas,measure="fuzzy_plain")
+
     if args.simstats:
         get_similarity_list(args.simstats)
+
+    if args.gofuzzy:
+        ## include go term heatmap here!        
+        pass
 

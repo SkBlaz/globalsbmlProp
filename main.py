@@ -2,6 +2,8 @@
 ## this is the main analysis class
 
 import re
+import multiprocessing as mp
+import itertools
 import xml.etree.ElementTree as ET
 import sys
 import os.path
@@ -102,7 +104,7 @@ def printFunctionDefinition(n, fd):
              return formula
 #             print(formula + "\n");
 
-def getModelMath(genModels,cmprt='all'):
+def getModelMath(genModels,cmprt="all",goterms="all"):
 
     ## this function obtaines reaction and other math related to specific models and saves them into a dataframe
     
@@ -154,15 +156,15 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
     if precomputed == None:
         if measure == "ED":
             import editdistance as ed
-        elif measure == "fuzzy":
+        elif measure == "fuzzy" or measure == "fuzzy_plain":
             from fuzzywuzzy import fuzz
             from fuzzywuzzy import process
         else:
             pass
-        from itertools import combinations
+
         import numpy as np
 
-    
+        pool = mp.Pool(mp.cpu_count())
         print("Starting pairwise distance measurements..")
         distframe = pd.DataFrame()
         ## double loop for pairwise distances v is of form list of lists
@@ -170,7 +172,7 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
         totlen = len(formula_file.keys())
         for k,v in formula_file.items():
             partial+=1
-            if partial % 10 == 0:
+            if partial % 1 == 0:
                 print(float(partial*100/totlen),"%","complete.")
             for k2,v2 in formula_file.items():
             
@@ -178,12 +180,17 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                 v1_rep = [formula for sublist in v for formula in sublist]
                 v2_rep = [formula for sublist in v2 for formula in sublist]
 
+                all_pairs = []
+                for f1 in v1_rep:
+                    for f2 in v2_rep:
+                        all_pairs.append((f1,f2))
+                
                 if measure == "ED":
-                    distMinAvg = np.mean([ed.eval(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                    distMinAvg = np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
                 if measure == "fuzzy":
-                    distMinAvg = np.mean([fuzz.partial_ratio(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                    distMinAvg = np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
                 if measure == "fuzzy_plain":
-                    distMinAvg = np.mean([fuzz.partial(s1,s2) for s1 in v1_rep for s2 in v2_rep])
+                    distMinAvg = np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
 
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
@@ -223,13 +230,13 @@ if __name__ == "__main__":
     parser.add_argument("--interfuzzy",help="Distances within individual components")
     parser.add_argument("--simstats",help="Most similar, yet not the same")
     parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")
-    parser.add_argument("--gofuzzy",help="Basic fuzzy algorithm - GO")  
+    parser.add_argument("--goterms",help="Use GO terms?")  
     args = parser.parse_args()
 
     print("Beginning extraction..")
     
     datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
-    model_getter = model_generator(datafolder)    
+    model_getter = model_generator(datafolder)
 
     ## query parts of the cell/ organism
     compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
@@ -238,11 +245,17 @@ if __name__ == "__main__":
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
-    comp_formulas,go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
-    print ("Ready to parse..", len(comp_formulas))
+    compartment_formulas, go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+
+    if args.goterms:
+        print(len(go_formulas.keys())," Individual GO terms found.")    
+        comp_formulas = go_formulas
+    else:
+        comp_formulas = compartment_formulas
     
     if args.interlev:
-        ## this only gets the saved data, which is further
+
+        ## this only gets the saved data, which is further        
         inter_component_distances(comp_formulas)
 
     if args.interfuzzy:
@@ -254,7 +267,4 @@ if __name__ == "__main__":
     if args.simstats:
         get_similarity_list(args.simstats)
 
-    if args.gofuzzy:
-        ## include go term heatmap here!        
-        pass
 

@@ -172,7 +172,7 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
         totlen = len(formula_file.keys())
         for k,v in formula_file.items():
             partial+=1
-            if partial % 1 == 0:
+            if partial % 10 == 0:
                 print(float(partial*100/totlen),"%","complete.")
             for k2,v2 in formula_file.items():
             
@@ -183,7 +183,8 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                 all_pairs = []
                 for f1 in v1_rep:
                     for f2 in v2_rep:
-                        all_pairs.append((f1,f2))
+                        if (f1,f2) not in all_pairs:
+                            all_pairs.append((f1,f2))
                 
                 if measure == "ED":
                     distMinAvg = np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
@@ -248,8 +249,9 @@ if __name__ == "__main__":
     compartment_formulas, go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
 
     if args.goterms:
-        print(len(go_formulas.keys())," Individual GO terms found.")    
-        comp_formulas = go_formulas
+        slist = list((go_formulas.keys()))[0:5]
+        comp_formulas = {k : go_formulas[k] for k in slist}
+        print(len(comp_formulas.keys())," Individual GO terms found for processing..")
     else:
         comp_formulas = compartment_formulas
     

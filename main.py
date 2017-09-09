@@ -1,5 +1,8 @@
+
 ## this is the main analysis class
 
+import re
+import xml.etree.ElementTree as ET
 import sys
 import os.path
 from libsbml import *  ## the main library
@@ -90,19 +93,6 @@ def printFunctionDefinition(n, fd):
  #        print("FunctionDefinition " + str(n) + ", " + fd.getId());
  
          math = fd.getMath();
-         # Print function arguments. 
- #         if (math.getNumChildren() > 1):
- #             print("(" + (math.getLeftChild()).getName());
- # # Print function arguments. 
-
- #             for n in range (1, math.getNumChildren()):
- #                 try:
- #                     print(", " + (math.getChild(n)).getName());
- #                 except:
- #                     pass
- 
- #         print(") := ");
- 
          # # Print function body. 
          if (math.getNumChildren() == 0):
              print("(no body defined)");
@@ -124,6 +114,21 @@ def getModelMath(genModels,cmprt='all'):
         else:
             model = document.getModel();
 
+            try:
+                psx = RDFAnnotationParser()
+                terms = psx.parseCVTerms(model)
+                annotation = terms.toXMLString()
+                tree = ET.ElementTree(ET.fromstring(annotation))
+                goterms = []
+                for elem in tree.iter():
+                    if "GO:" in str(elem.attrib):
+                        m = re.search("GO:\d{7}",str(elem.attrib))
+                        goterms.append(m.group(0))
+                                               
+            except:
+                pass
+            
+            
             formulas = []
             for n in range(0,model.getNumFunctionDefinitions()):
                 formulas.append(printFunctionDefinition(n + 1, model.getFunctionDefinition(n)))
@@ -239,7 +244,6 @@ if __name__ == "__main__":
         inter_component_distances(comp_formulas,measure="fuzzy")
     if args.interfuzzybasic:
         inter_component_distances(comp_formulas,measure="fuzzy_plain")
-
     if args.simstats:
         get_similarity_list(args.simstats)
 

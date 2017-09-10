@@ -181,10 +181,13 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                 second_terms = [formula for sublist in v2 for formula in sublist]
 
                 distMinAvg = 0
+                k = 10
+                pick_size_first = int(len(first_terms)/k)
+                pick_size_second = int(len(second_terms)/k)
                 
-                for j in range(0,10):
-                    first_indices = np.random.choice(len(first_terms),50)
-                    second_indices = np.random.choice(len(second_terms),50)
+                for j in range(0,k):
+                    first_indices = np.random.choice(len(first_terms),pick_size_first)
+                    second_indices = np.random.choice(len(second_terms),pick_size_second)
                     v1_rep = [first_terms[i] for i in first_indices]
                     v2_rep = [second_terms[i] for i in second_indices]
                 
@@ -201,7 +204,7 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                     if measure == "fuzzy_plain":
                         distMinAvg += np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
 
-                distMinAvg = distMinAvg/10
+                distMinAvg = distMinAvg/k
                         
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
@@ -223,6 +226,15 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
 
     distframe.to_csv("distances"+measure+".csv")
 
+def draw_heatmap_basic(fname):
+    distframe = pd.read_csv(fname)
+    distframe = distframe[(distframe['distance'] > 0) & (distframe['distance'] < 100)]
+    indata = distframe.pivot("First component","Second component","distance")
+    ax = sns.heatmap(indata,cmap="BuGn")
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.ylabel("Intra-compartment distance")
+    plt.show()
 
 def get_similarity_list(fname):
     distframe = pd.read_csv(fname)
@@ -241,7 +253,8 @@ if __name__ == "__main__":
     parser.add_argument("--interfuzzy",help="Distances within individual components")
     parser.add_argument("--simstats",help="Most similar, yet not the same")
     parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")
-    parser.add_argument("--goterms",help="Use GO terms?")  
+    parser.add_argument("--goterms",help="Use GO terms?")
+    parser.add_argument("--draw_hm",help="Draw a basic heatmap") 
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -259,7 +272,7 @@ if __name__ == "__main__":
     compartment_formulas, go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
 
     if args.goterms:
-        slist = list((go_formulas.keys()))[0:50]
+        slist = list((go_formulas.keys()))
         comp_formulas = {k : go_formulas[k] for k in slist}
         print(len(comp_formulas.keys())," Individual GO terms found for processing..")
     else:
@@ -279,4 +292,5 @@ if __name__ == "__main__":
     if args.simstats:
         get_similarity_list(args.simstats)
 
-
+    if args.draw_hm:
+        draw_heatmap_basic(args.simstats)

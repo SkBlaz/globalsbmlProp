@@ -2,6 +2,7 @@
 ## this is the main analysis class
 
 import re
+import numpy as np
 import multiprocessing as mp
 import itertools
 import xml.etree.ElementTree as ET
@@ -104,19 +105,51 @@ def printFunctionDefinition(n, fd):
              return formula
 #             print(formula + "\n");
 
+
+def navigateMath(node):
+  #
+  # first take the current element
+  #
+  if node.getType() == AST_PLUS:
+    if node.getNumChildren() == 0:
+       print ("0")
+       return
+    navigateMath(node.getChild(0))
+    for i in range(1, node.getNumChildren()):
+      print ("+")
+      navigateMath(node.getChild(i))
+    
+  elif node.getType() == AST_REAL:
+      # this will be constants 
+      print (node.getReal())
+  elif node.getType() == AST_NAME:
+      print (node.getName())
+  else:
+      # handle more cases here ...
+      pass
+
 def getModelMath(genModels,cmprt="all",goterms="all"):
 
     ## this function obtaines reaction and other math related to specific models and saves them into a dataframe
     
     cpfor = defaultdict(list)
     go_dict = defaultdict(list)
+    go_dict_ast = defaultdict(list)
+    feature_list = ["<apply>","<times>","<power>","<divide>","<cn>","<ci>","<plus>","<minus>"]
+
+    for x in range(2,3,1):
+        extended = ["".join(x) for x in itertools.permutations(feature_list, x)]
+        feature_list+=extended
+        
+    print("Possibly using:",len(feature_list),"fingerprints..")
+
     for candidate in genModels:
         document = readSBML(candidate);
         if (document.getNumErrors() > 0):
             pass
         else:
             model = document.getModel();
-
+            
             try:
                 psx = RDFAnnotationParser()
                 terms = psx.parseCVTerms(model)
@@ -133,10 +166,17 @@ def getModelMath(genModels,cmprt="all",goterms="all"):
             
             
             formulas = []
-            for n in range(0,model.getNumFunctionDefinitions()):
-                formulas.append(printFunctionDefinition(n + 1, model.getFunctionDefinition(n)))
+            for n in range(0,model.getNumFunctionDefinitions()):                
+                form = printFunctionDefinition(n + 1, model.getFunctionDefinition(n))
+                formulas.append(form)                
+
+            
             for el in goterms:
                 for f in formulas:
+
+                    treeRep = writeMathMLToString(parseFormula(f)).replace(" ","").replace("\n","").replace("/","")
+                    counts = [len(re.findall(x,treeRep)) for x in feature_list]
+                    go_dict_ast[el].append(counts)
                     go_dict[el].append(f)
                 
             for i in range(0, model.getNumCompartments()):
@@ -148,10 +188,11 @@ def getModelMath(genModels,cmprt="all",goterms="all"):
                     cpfor[sp.getId()].append(formulas)
 
     ## get compartment|formula structure
-    return (cpfor,go_dict)
+    return (cpfor,go_dict,go_dict_ast)
 
-def inter_component_distances(formula_file,measure="ED",precomputed=None):
 
+def inter_component_distances(formula_file,measure="ED",precomputed=None,jid="default"):
+    
     import seaborn as sns
     if precomputed == None:
         if measure == "ED":
@@ -170,34 +211,29 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
         ## double loop for pairwise distances v is of form list of lists
         partial = 0
         totlen = len(formula_file.keys())
+        print("Number of formula clusters {}".format(totlen))
         for k,v in formula_file.items():
             partial+=1
             if partial % 1 == 0:
-                print(float(partial*100/totlen),"%","complete.")
+                print(float((partial*100)/totlen),"%","complete.")
             for k2,v2 in formula_file.items():
-            
-                ## first get representative formulas for individual components
-                first_terms = [formula for sublist in v for formula in sublist]
-                second_terms = [formula for sublist in v2 for formula in sublist]
 
+                ## first get representative formulas for individual components
                 distMinAvg = 0                            
                 all_pairs = []
-                for f1 in first_terms:
-                    for f2 in second_terms:
+                for f1 in v:
+                    for f2 in v2:
                         if (f1,f2) not in all_pairs:
                             all_pairs.append((f1,f2))
 
-                print("Number of comparisons in this cycle:",len(all_pairs)) 
                 if measure == "ED":
-                    distMinAvg += np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
+                    distMinAvg = np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
                 if measure == "fuzzy":
-                    distMinAvg += np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
+                    distMinAvg = np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
                 else:
-                    #                        measure == "fuzzy_plain":
-                    distMinAvg += np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
+                    distMinAvg = np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
 
-                distMinAvg = distMinAvg
-                        
+                
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
     else:
@@ -207,16 +243,18 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
     ax = sns.heatmap(indata,cmap="BuGn")
     plt.xticks(rotation=90)
     plt.yticks(rotation=0)
-    plt.show()
+    figure = ax.get_figure() 
+    figure.savefig("out_image_results/"+"hm_"+jid)
 
     tmpframe = distframe[distframe['First component'] == distframe['Second component']]
     tmpframe = tmpframe.sort_values(['distance'])
-    sns.barplot(x="First component",y="distance",data=tmpframe)
+    g = sns.barplot(x="First component",y="distance",data=tmpframe)
     plt.xticks(rotation=90)
+    figure = ax.get_figure()
+    figure.savefig("out_image_results/"+"bp_"+jid)
     plt.ylabel("Intra-compartment distance")
-    plt.show()
 
-    distframe.to_csv("distances"+measure+".csv")
+    distframe.to_csv("out_files/"+measure+"_"+jid+".csv")
 
 def draw_heatmap_basic(fname):
     distframe = pd.read_csv(fname)
@@ -247,7 +285,29 @@ def get_similarity_list(fname):
     distframe= distframe[distframe['First component'] != distframe['Second component']].sort_values(['distance'],ascending=False)
     distframe.to_csv(fname.split(".")[0]+"similar_list.csv")
     distframe.to_latex(fname.split(".")[0]+"similar_list.tex")
-        
+
+def fingerprints_inter(formula_file,precomputed=None,jid="default"):
+
+    dframe = pd.DataFrame()
+    print("Comparing fingerptints")
+    count = 0
+    for x,y in formula_file.items():
+        count+=1
+        if count/len(formula_file.items()) % 0.01:
+            print("Processed",count/len(formula_file.items()))
+        for x2,y2 in formula_file.items():
+            m1 = np.mean(y, axis=0)
+            m2 = np.mean(y2, axis=0)
+            dsum = np.sum(np.absolute(m2-m1))
+            dframe = dframe.append({'First component' : x, 'Second component' : x2, 'distance' : dsum},ignore_index=True)
+
+    indata = dframe.pivot("First component","Second component","distance")
+    ax = sns.heatmap(indata,cmap="BuGn",label='small')
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    figure = ax.get_figure() 
+    figure.savefig("out_image_results/"+"hm_"+jid)    
+    dframe.to_csv("out_files/"+measure+"_"+jid+".csv")
     
 if __name__ == "__main__":
 
@@ -260,7 +320,9 @@ if __name__ == "__main__":
     parser.add_argument("--simstats",help="Most similar, yet not the same")
     parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")
     parser.add_argument("--goterms",help="Use GO terms?")
-    parser.add_argument("--draw_hm",help="Draw a basic heatmap") 
+    parser.add_argument("--draw_hm",help="Draw a basic heatmap")
+    parser.add_argument("--finger",help="sign_counts")
+    parser.add_argument("--job",help="job_name") 
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -269,14 +331,14 @@ if __name__ == "__main__":
     model_getter = model_generator(datafolder)
 
     ## query parts of the cell/ organism
-    compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
+    compartments_to_check=['cell','Endosome']
     
     if args.stats:
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
     ## get both term sets..
-    compartment_formulas, go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
+    compartment_formulas, go_formulas, ast = getModelMath(model_getter,cmprt="all")
 
     ## follow either go terms or compartment names..
     if args.goterms:
@@ -288,15 +350,18 @@ if __name__ == "__main__":
     
     if args.interlev:
 
-        ## this only gets the saved data, which is further        
-        inter_component_distances(comp_formulas)
+        ## this only gets the saved data, which is further      
+        inter_component_distances(comp_formulas,jid=args.job)
 
     if args.interfuzzy:
-        inter_component_distances(comp_formulas,measure="fuzzy")
+        inter_component_distances(comp_formulas,measure="fuzzy",jid=args.job)
 
     if args.interfuzzybasic:
-        inter_component_distances(comp_formulas,measure="fuzzy_plain")
+        inter_component_distances(comp_formulas,measure="fuzzy_plain",jid=args.job)
 
+    if args.finger:
+        fingerprints_inter(ast,jid=args.job)
+        
     if args.simstats:
         get_similarity_list(args.simstats)
 

@@ -1,0 +1,5 @@
+,First component,Second component,distance
+0,cell,cell,0.17831978319783198
+1,cell,Endosome,0.0
+2,Endosome,cell,0.0
+3,Endosome,Endosome,0.0

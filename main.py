@@ -213,6 +213,20 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
     distframe.to_csv("distances"+measure+".csv")
 
 
+def construct_consensus_string(termlist):
+
+    ## for each therm, do align, do top alignment,
+    ## for each consequential, do print
+    ## craete consensus
+
+    pass
+
+
+def compare_consensus_sequences(lconsensus):
+
+    ## maybe even apply the inter sequence comparison, yet no inner loop here..
+    pass
+
 def get_similarity_list(fname):
     distframe = pd.read_csv(fname)
     distframe= distframe[distframe['First component'] != distframe['Second component']].sort_values(['distance'],ascending=False)
@@ -245,8 +259,10 @@ if __name__ == "__main__":
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
+    ## get both term sets..
     compartment_formulas, go_formulas = getModelMath(model_getter,cmprt=compartments_to_check)
 
+    ## follow either go terms or compartment names..
     if args.goterms:
         print(len(go_formulas.keys())," Individual GO terms found.")    
         comp_formulas = go_formulas
@@ -266,5 +282,3 @@ if __name__ == "__main__":
 
     if args.simstats:
         get_similarity_list(args.simstats)
-
-

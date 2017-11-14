@@ -172,26 +172,40 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
         totlen = len(formula_file.keys())
         for k,v in formula_file.items():
             partial+=1
-            if partial % 1 == 0:
+            if partial % 5 == 0:
                 print(float(partial*100/totlen),"%","complete.")
             for k2,v2 in formula_file.items():
             
                 ## first get representative formulas for individual components
-                v1_rep = [formula for sublist in v for formula in sublist]
-                v2_rep = [formula for sublist in v2 for formula in sublist]
+                first_terms = [formula for sublist in v for formula in sublist]
+                second_terms = [formula for sublist in v2 for formula in sublist]
 
-                all_pairs = []
-                for f1 in v1_rep:
-                    for f2 in v2_rep:
-                        all_pairs.append((f1,f2))
+                distMinAvg = 0
+                k = 10
+                pick_size_first = int(len(first_terms)/k)
+                pick_size_second = int(len(second_terms)/k)
                 
-                if measure == "ED":
-                    distMinAvg = np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
-                if measure == "fuzzy":
-                    distMinAvg = np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
-                if measure == "fuzzy_plain":
-                    distMinAvg = np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
+                for j in range(0,k):
+                    first_indices = np.random.choice(len(first_terms),pick_size_first)
+                    second_indices = np.random.choice(len(second_terms),pick_size_second)
+                    v1_rep = [first_terms[i] for i in first_indices]
+                    v2_rep = [second_terms[i] for i in second_indices]
+                
+                    all_pairs = []
+                    for f1 in v1_rep:
+                        for f2 in v2_rep:
+                            if (f1,f2) not in all_pairs:
+                                all_pairs.append((f1,f2))
+                            
+                    if measure == "ED":
+                        distMinAvg += np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
+                    if measure == "fuzzy":
+                        distMinAvg += np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
+                    if measure == "fuzzy_plain":
+                        distMinAvg += np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
 
+                distMinAvg = distMinAvg/k
+                        
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
     else:
@@ -212,6 +226,15 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
 
     distframe.to_csv("distances"+measure+".csv")
 
+def draw_heatmap_basic(fname):
+    distframe = pd.read_csv(fname)
+    distframe = distframe[(distframe['distance'] > 0) & (distframe['distance'] < 100)]
+    indata = distframe.pivot("First component","Second component","distance")
+    ax = sns.heatmap(indata,cmap="BuGn")
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.ylabel("Intra-compartment distance")
+    plt.show()
 
 def construct_consensus_string(termlist):
 
@@ -244,7 +267,8 @@ if __name__ == "__main__":
     parser.add_argument("--interfuzzy",help="Distances within individual components")
     parser.add_argument("--simstats",help="Most similar, yet not the same")
     parser.add_argument("--interfuzzybasic",help="Basic fuzzy algorithm")
-    parser.add_argument("--goterms",help="Use GO terms?")  
+    parser.add_argument("--goterms",help="Use GO terms?")
+    parser.add_argument("--draw_hm",help="Draw a basic heatmap") 
     args = parser.parse_args()
 
     print("Beginning extraction..")
@@ -264,8 +288,9 @@ if __name__ == "__main__":
 
     ## follow either go terms or compartment names..
     if args.goterms:
-        print(len(go_formulas.keys())," Individual GO terms found.")    
-        comp_formulas = go_formulas
+        slist = list((go_formulas.keys()))
+        comp_formulas = {k : go_formulas[k] for k in slist}
+        print(len(comp_formulas.keys())," Individual GO terms found for processing..")
     else:
         comp_formulas = compartment_formulas
     
@@ -282,3 +307,9 @@ if __name__ == "__main__":
 
     if args.simstats:
         get_similarity_list(args.simstats)
+<<<<<<< HEAD
+=======
+
+    if args.draw_hm:
+        draw_heatmap_basic(args.simstats)
+>>>>>>> bef10d498d9be5482419da22d6523ca412284474

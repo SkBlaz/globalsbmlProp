@@ -160,7 +160,7 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
             from fuzzywuzzy import fuzz
             from fuzzywuzzy import process
         else:
-            pass
+            print("Default measure..")
 
         import numpy as np
 
@@ -172,7 +172,7 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
         totlen = len(formula_file.keys())
         for k,v in formula_file.items():
             partial+=1
-            if partial % 5 == 0:
+            if partial % 1 == 0:
                 print(float(partial*100/totlen),"%","complete.")
             for k2,v2 in formula_file.items():
             
@@ -180,31 +180,23 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None):
                 first_terms = [formula for sublist in v for formula in sublist]
                 second_terms = [formula for sublist in v2 for formula in sublist]
 
-                distMinAvg = 0
-                k = 10
-                pick_size_first = int(len(first_terms)/k)
-                pick_size_second = int(len(second_terms)/k)
-                
-                for j in range(0,k):
-                    first_indices = np.random.choice(len(first_terms),pick_size_first)
-                    second_indices = np.random.choice(len(second_terms),pick_size_second)
-                    v1_rep = [first_terms[i] for i in first_indices]
-                    v2_rep = [second_terms[i] for i in second_indices]
-                
-                    all_pairs = []
-                    for f1 in v1_rep:
-                        for f2 in v2_rep:
-                            if (f1,f2) not in all_pairs:
-                                all_pairs.append((f1,f2))
-                            
-                    if measure == "ED":
-                        distMinAvg += np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
-                    if measure == "fuzzy":
-                        distMinAvg += np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
-                    if measure == "fuzzy_plain":
-                        distMinAvg += np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
+                distMinAvg = 0                            
+                all_pairs = []
+                for f1 in first_terms:
+                    for f2 in second_terms:
+                        if (f1,f2) not in all_pairs:
+                            all_pairs.append((f1,f2))
 
-                distMinAvg = distMinAvg/k
+                print("Number of comparisons in this cycle:",len(all_pairs)) 
+                if measure == "ED":
+                    distMinAvg += np.mean([pool.apply(ed.eval, args=(x,y,)) for x,y in all_pairs])
+                if measure == "fuzzy":
+                    distMinAvg += np.mean([pool.apply(fuzz.partial_ratio, args=(x,y,)) for x,y in all_pairs])
+                else:
+                    #                        measure == "fuzzy_plain":
+                    distMinAvg += np.mean([pool.apply(fuzz.ratio, args=(x,y,)) for x,y in all_pairs])
+
+                distMinAvg = distMinAvg
                         
                 if distMinAvg >= 0:
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
@@ -307,9 +299,6 @@ if __name__ == "__main__":
 
     if args.simstats:
         get_similarity_list(args.simstats)
-<<<<<<< HEAD
-=======
 
     if args.draw_hm:
         draw_heatmap_basic(args.simstats)
->>>>>>> bef10d498d9be5482419da22d6523ca412284474

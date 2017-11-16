@@ -15,6 +15,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+pool = mp.Pool(mp.cpu_count())
+
 def printAnnotation(sb, id=""):
     if (not sb.isSetAnnotation()):
         return;        
@@ -205,7 +207,6 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None,jid="de
 
         import numpy as np
 
-        pool = mp.Pool(mp.cpu_count())
         print("Starting pairwise distance measurements..")
         distframe = pd.DataFrame()
         ## double loop for pairwise distances v is of form list of lists

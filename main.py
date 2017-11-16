@@ -333,14 +333,15 @@ if __name__ == "__main__":
     model_getter = model_generator(datafolder)
 
     ## query parts of the cell/ organism
-    compartments_to_check=['cell','Endosome']
+    compartments_to_check=['cell','nucleus','plasma','nuclei','CellSurface','cytosol','vacuole','Lysosome','Mitochondria','cellsurface','Endosome']
+
     
     if args.stats:
         ## those are some basic numeric statistics regarding individual models
         get_basic_stats(model_getter,compartment=compartments_to_check)
 
     ## get both term sets..
-    compartment_formulas, go_formulas, ast = getModelMath(model_getter,cmprt="all")
+    compartment_formulas, go_formulas, ast = getModelMath(model_getter,cmprt=compartments_to_check)
 
     ## follow either go terms or compartment names..
     if args.goterms:

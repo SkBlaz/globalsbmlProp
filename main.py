@@ -177,7 +177,6 @@ def getModelMath(genModels,cmprt="all",goterms="all"):
                     treeRep = writeMathMLToString(parseFormula(f)).replace(" ","").replace("\n","").replace("/","")
                     counts = [len(re.findall(x,treeRep)) for x in feature_list]
                     go_dict_ast[el].append(counts)
-                    print(f)
                     go_dict[el].append(f)
                 
             for i in range(0, model.getNumCompartments()):

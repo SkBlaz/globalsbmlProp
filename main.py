@@ -309,7 +309,7 @@ def fingerprints_inter(formula_file,precomputed=None,jid="default"):
     # figure = ax.get_figure() 
     # figure.savefig("out_image_results/"+"hm_"+jid)
     
-    dframe.to_csv("out_files/"+measure+"_"+jid+".csv")
+    dframe.to_csv("out_files/"+"_"+jid+".csv")
     
 if __name__ == "__main__":
 

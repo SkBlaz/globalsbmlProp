@@ -240,20 +240,20 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None,jid="de
     else:
         distframe = pd.read_csv(precomputed)
                     
-    indata = distframe.pivot("First component","Second component","distance")
-    ax = sns.heatmap(indata,cmap="BuGn")
-    plt.xticks(rotation=90)
-    plt.yticks(rotation=0)
-    figure = ax.get_figure() 
-    figure.savefig("out_image_results/"+"hm_"+jid)
+    # indata = distframe.pivot("First component","Second component","distance")
+    # ax = sns.heatmap(indata,cmap="BuGn")
+    # plt.xticks(rotation=90)
+    # plt.yticks(rotation=0)
+    # figure = ax.get_figure() 
+    # figure.savefig("out_image_results/"+"hm_"+jid)
 
-    tmpframe = distframe[distframe['First component'] == distframe['Second component']]
-    tmpframe = tmpframe.sort_values(['distance'])
-    g = sns.barplot(x="First component",y="distance",data=tmpframe)
-    plt.xticks(rotation=90)
-    figure = ax.get_figure()
-    figure.savefig("out_image_results/"+"bp_"+jid)
-    plt.ylabel("Intra-compartment distance")
+    # tmpframe = distframe[distframe['First component'] == distframe['Second component']]
+    # tmpframe = tmpframe.sort_values(['distance'])
+    # g = sns.barplot(x="First component",y="distance",data=tmpframe)
+    # plt.xticks(rotation=90)
+    # figure = ax.get_figure()
+    # figure.savefig("out_image_results/"+"bp_"+jid)
+    # plt.ylabel("Intra-compartment distance")
 
     distframe.to_csv("out_files/"+measure+"_"+jid+".csv")
 
@@ -302,12 +302,13 @@ def fingerprints_inter(formula_file,precomputed=None,jid="default"):
             dsum = np.sum(np.absolute(m2-m1))
             dframe = dframe.append({'First component' : x, 'Second component' : x2, 'distance' : dsum},ignore_index=True)
 
-    indata = dframe.pivot("First component","Second component","distance")
-    ax = sns.heatmap(indata,cmap="BuGn",label='small')
-    plt.xticks(rotation=90)
-    plt.yticks(rotation=0)
-    figure = ax.get_figure() 
-    figure.savefig("out_image_results/"+"hm_"+jid)    
+    # indata = dframe.pivot("First component","Second component","distance")
+    # ax = sns.heatmap(indata,cmap="BuGn",label='small')
+    # plt.xticks(rotation=90)
+    # plt.yticks(rotation=0)
+    # figure = ax.get_figure() 
+    # figure.savefig("out_image_results/"+"hm_"+jid)
+    
     dframe.to_csv("out_files/"+measure+"_"+jid+".csv")
     
 if __name__ == "__main__":

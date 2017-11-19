@@ -258,13 +258,30 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None,jid="de
     distframe.to_csv("out_files/"+measure+"_"+jid+".csv")
 
 def draw_heatmap_basic(fname):
+    from sklearn import preprocessing
+    scaler = preprocessing.MinMaxScaler()
     distframe = pd.read_csv(fname)
-    distframe = distframe[(distframe['distance'] > 0) & (distframe['distance'] < 100)]
+    print(distframe.describe())
+    
+    distframe[['distance']] = pd.DataFrame(scaler.fit_transform(distframe[['distance']]))
+    
+#    distframe['distance'] = distframe['distance']/distframe['distance'].max()
+#    distframe = distframe[(distframe['distance'] >= 0)]
+
     indata = distframe.pivot("First component","Second component","distance")
-    ax = sns.heatmap(indata,cmap="BuGn")
+    ax = sns.heatmap(indata,cmap="Paired")
+    ax.figure.tight_layout()
     plt.xticks(rotation=90)
     plt.yticks(rotation=0)
-    plt.ylabel("Intra-compartment distance")
+    plt.xlabel("Second term")
+    plt.ylabel("First term")
+    plt.show()
+
+    ax2 = sns.clustermap(indata,cmap="Paired")
+    plt.setp(ax2.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
+    plt.setp(ax2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    plt.xlabel("Second term")
+    plt.ylabel("First term")
     plt.show()
 
 def construct_consensus_string(termlist):
@@ -327,6 +344,14 @@ if __name__ == "__main__":
     parser.add_argument("--job",help="job_name") 
     args = parser.parse_args()
 
+    if args.simstats:
+        get_similarity_list(args.simstats)
+
+
+    if args.draw_hm:
+        draw_heatmap_basic(args.simstats)
+
+    
     print("Beginning extraction..")
     
     datafolder = "data/BioModels_Database-r31_pub-sbml_files/curated"
@@ -368,9 +393,3 @@ if __name__ == "__main__":
 
     if args.finger:
         fingerprints_inter(ast,jid=args.job)
-        
-    if args.simstats:
-        get_similarity_list(args.simstats)
-
-    if args.draw_hm:
-        draw_heatmap_basic(args.simstats)

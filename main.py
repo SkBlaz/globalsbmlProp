@@ -269,7 +269,11 @@ def draw_heatmap_basic(fname):
 #    distframe = distframe[(distframe['distance'] >= 0)]
 
     indata = distframe.pivot("First component","Second component","distance")
-    ax = sns.heatmap(indata,cmap="Paired")
+    indata=indata.fillna(0)
+    rc={'axes.labelsize': 10, 'font.size': 2, 'legend.fontsize': 100, 'axes.titlesize': 0}
+    plt.rcParams.update(**rc)
+    #g = sns.heatmap(dframe,cmap=px,cbar_kws={'label': 'Number of edges (log10)'},linewidths=.5)
+    ax = sns.heatmap(indata,cmap="Paired",)
     ax.figure.tight_layout()
     plt.xticks(rotation=90)
     plt.yticks(rotation=0)
@@ -277,7 +281,8 @@ def draw_heatmap_basic(fname):
     plt.ylabel("First term")
     plt.show()
 
-    ax2 = sns.clustermap(indata,cmap="Paired")
+    
+    ax2 = sns.clustermap(indata,cmap="Paired")    
     plt.setp(ax2.ax_heatmap.yaxis.get_majorticklabels(), rotation=30)
     plt.setp(ax2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     plt.xlabel("Second term")

@@ -239,30 +239,17 @@ def inter_component_distances(formula_file,measure="ED",precomputed=None,jid="de
                     distframe = distframe.append({'First component' : k, 'Second component' : k2, 'distance' : distMinAvg},ignore_index=True)
     else:
         distframe = pd.read_csv(precomputed)
-                    
-    # indata = distframe.pivot("First component","Second component","distance")
-    # ax = sns.heatmap(indata,cmap="BuGn")
-    # plt.xticks(rotation=90)
-    # plt.yticks(rotation=0)
-    # figure = ax.get_figure() 
-    # figure.savefig("out_image_results/"+"hm_"+jid)
-
-    # tmpframe = distframe[distframe['First component'] == distframe['Second component']]
-    # tmpframe = tmpframe.sort_values(['distance'])
-    # g = sns.barplot(x="First component",y="distance",data=tmpframe)
-    # plt.xticks(rotation=90)
-    # figure = ax.get_figure()
-    # figure.savefig("out_image_results/"+"bp_"+jid)
-    # plt.ylabel("Intra-compartment distance")
+ 
 
     distframe.to_csv("out_files/"+measure+"_"+jid+".csv")
 
 def draw_heatmap_basic(fname):
     from sklearn import preprocessing
     scaler = preprocessing.MinMaxScaler()
+    print(fname)
     distframe = pd.read_csv(fname)
     print(distframe.describe())
-    
+    print("read file..")
     distframe[['distance']] = pd.DataFrame(scaler.fit_transform(distframe[['distance']]))
     
 #    distframe['distance'] = distframe['distance']/distframe['distance'].max()
@@ -324,12 +311,6 @@ def fingerprints_inter(formula_file,precomputed=None,jid="default"):
             dsum = np.sum(np.absolute(m2-m1))
             dframe = dframe.append({'First component' : x, 'Second component' : x2, 'distance' : dsum},ignore_index=True)
 
-    # indata = dframe.pivot("First component","Second component","distance")
-    # ax = sns.heatmap(indata,cmap="BuGn",label='small')
-    # plt.xticks(rotation=90)
-    # plt.yticks(rotation=0)
-    # figure = ax.get_figure() 
-    # figure.savefig("out_image_results/"+"hm_"+jid)
     
     dframe.to_csv("out_files/"+"_"+jid+".csv")
     
@@ -354,7 +335,7 @@ if __name__ == "__main__":
 
 
     if args.draw_hm:
-        draw_heatmap_basic(args.simstats)
+        draw_heatmap_basic(args.draw_hm)
 
     
     print("Beginning extraction..")

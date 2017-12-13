@@ -139,8 +139,8 @@ def getModelMath(genModels,cmprt="all",goterms="all"):
     go_dict_ast = defaultdict(list)
     feature_list = ["<apply>","<times>","<power>","<divide>","<cn>","<ci>","<plus>","<minus>"]
 
-    for x in range(2,3,1):
-        extended = ["".join(x) for x in itertools.permutations(feature_list, x)]
+    for x in range(2,4,1):
+        extended = set(["".join(x) for x in itertools.combinations(feature_list, x)][0:500])
         feature_list+=extended
         
     print("Possibly using:",len(feature_list),"fingerprints..")

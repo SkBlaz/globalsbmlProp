@@ -1,8 +1,11 @@
 
 ## this is the main analysis class
 
+from plotnine import *
 import re
+from scipy.cluster.hierarchy import dendrogram, linkage
 import numpy as np
+from sklearn.manifold import TSNE
 import multiprocessing as mp
 import itertools
 import xml.etree.ElementTree as ET
@@ -14,6 +17,7 @@ from collections import Counter,defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 pool = mp.Pool(mp.cpu_count())
 
@@ -140,7 +144,7 @@ def getModelMath(genModels,cmprt="all",goterms="all"):
     feature_list = ["<apply>","<times>","<power>","<divide>","<cn>","<ci>","<plus>","<minus>"]
 
     for x in range(2,4,1):
-        extended = set(["".join(x) for x in itertools.combinations(feature_list, x)][0:500])
+        extended = set(["".join(x) for x in itertools.combinations(feature_list, x)][0:10])
         feature_list+=extended
         
     print("Possibly using:",len(feature_list),"fingerprints..")
@@ -313,10 +317,42 @@ def fingerprints_inter(formula_file,precomputed=None,jid="default"):
 
     
     dframe.to_csv("out_files/"+"_"+jid+".csv")
+
+
+def tokenize(form):
+
+    return form.split(" ")
+
+
+def docsim(formulas):
+
+    formulas = {k : " ".join(v) for k,v in formulas.items()}
+    print("Beginning vectorization")
+    tfidf = TfidfVectorizer(tokenizer=tokenize)
+    X = tfidf.fit_transform(formulas.values())
+    X_embedded = TSNE(n_components=2).fit_transform(X.toarray())
+
+    dfr = pd.DataFrame(X_embedded,columns=['dim1','dim2'])
+    dfr['names'] = formulas.keys()
+    print(dfr.head())
+    gx = (ggplot(dfr, aes('dim1', 'dim2'))
+     + geom_point(size=0.5)+ theme_bw() + geom_text(aes(label='names'),size=9)
+    )
+    gx.draw()
+    plt.show()
+    
+    Z = linkage(X.toarray(), 'ward')
+    dendrogram(
+        Z,
+        leaf_rotation=90.,  # rotates the x axis labels
+        leaf_font_size=8.,  # font size for the x axis labels
+        labels = list(formulas.keys())
+    )
+    plt.show()
     
 if __name__ == "__main__":
 
-    import argparse    
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats",help="Some basic statistics")
     parser.add_argument("--lev",help="Distances within individual components")
@@ -327,7 +363,8 @@ if __name__ == "__main__":
     parser.add_argument("--goterms",help="Use GO terms?")
     parser.add_argument("--draw_hm",help="Draw a basic heatmap")
     parser.add_argument("--finger",help="sign_counts")
-    parser.add_argument("--job",help="job_name") 
+    parser.add_argument("--job",help="job_name")
+    parser.add_argument("--tfidf",help="job_name") 
     args = parser.parse_args()
 
     if args.simstats:
@@ -336,7 +373,6 @@ if __name__ == "__main__":
 
     if args.draw_hm:
         draw_heatmap_basic(args.draw_hm)
-
     
     print("Beginning extraction..")
     
@@ -352,7 +388,7 @@ if __name__ == "__main__":
 
     ## get both term sets..
     compartment_formulas, go_formulas, ast = getModelMath(model_getter,cmprt="all")
-
+    
     import random
     subset = random.sample(compartment_formulas.keys(),10)
     print(subset)
@@ -379,3 +415,6 @@ if __name__ == "__main__":
 
     if args.finger:
         fingerprints_inter(ast,jid=args.job)
+
+    if args.tfidf:
+        docsim(comp_formulas)
